@@ -5,7 +5,11 @@ import (
 	"math/rand"
 	"strconv"
 	"sync"
+	"time"
 )
+
+var mutex = &sync.Mutex{}
+var wg sync.WaitGroup
 
 //Stack interface
 type Stack interface {
@@ -22,31 +26,28 @@ func (Link *linkedlist) push(pushvalue int) {
 	mutex.Unlock()
 }
 
-func (Link *linkedlist) pop() {
+func (Link *linkedlist) pop(no int) {
+	defer mutex.Unlock()
 	mutex.Lock()
 	if Link.prev != nil {
-		fmt.Printf("Consumer pop element: %v \n", Link.Value)
+
+		fmt.Printf("%v Consumer pop element : %v \n", no, Link.Value)
 		newlink := Link.prev
+
+		//Link = Link.prev
 
 		Link.Value = newlink.Value
 		Link.prev = newlink.prev
 
+	} else {
+		fmt.Printf("%v Consumer : Stack is empty \n", no)
 	}
-	mutex.Unlock()
+
 }
 
 func init() {
-	rand.Seed(1)
+	rand.Seed(time.Now().UTC().UnixNano())
 }
-
-func push(pushvalue int, top linkedlist) linkedlist {
-	newlink := linkedlist{pushvalue, &top}
-	return newlink
-
-}
-
-var mutex = &sync.Mutex{}
-var wg sync.WaitGroup
 
 type linkedlist struct {
 	Value int
@@ -72,30 +73,14 @@ func ProducerLinked(link *linkedlist, no int) {
 func ConsumerLinked(link *linkedlist, no int) {
 
 	for i := 0; i < 10; i++ {
-		link.pop()
+		link.pop(no)
 		//link.Printstack()
+		link.Printstack()
 	}
-	link.Printstack()
+
 	wg.Done()
 
 }
-
-//Producer function
-// func Producer(item chan linkedlist, signal chan bool) {
-// 	defer wg.Done()
-// 	Produceditem := strconv.Itoa(rand.Intn(100))
-// 	var linkedar linkedlist
-// 	if item != nil {
-// 		linkedar = push(Produceditem, linkedar)
-// 	} else {
-// 		select {
-// 		case linkedar = <-item:
-// 			linkedar = push(Produceditem, linkedar)
-//
-// 		}
-// 	}
-// 	item <- linkedar
-// }
 
 //Printstack
 func (Link *linkedlist) Printstack() {
@@ -125,7 +110,8 @@ func main() {
 	fmt.Scan(&NoProducer)
 	fmt.Print("No. of Consumer:")
 	fmt.Scan(&NoConsumer)
-
+	starttime := time.Now()
+	fmt.Printf("Linked list started at: %v", starttime)
 	switch selection {
 
 	case 1:
@@ -138,22 +124,14 @@ func main() {
 		for i := 0; i < NoConsumer; i++ {
 			for i := 0; i < 10; i++ {
 				wg.Add(1)
-				go ConsumerLinked(&link, i)
+				go ConsumerLinked(&link, i+1)
 			}
 		}
 		wg.Wait()
+		fmt.Printf("Final stack")
 		link.Printstack()
+		fmt.Printf("Time taken to complete : %v \n", time.Since(starttime))
 
 	}
-
-	// Produceditembyproducer := make(chan linkedlist)
-	// signal := make(chan bool)
-	// for i := 0; i < 3; i++ {
-	// 	wg.Add(1)
-	// 	go Producer(Produceditembyproducer, signal)
-	//
-	// }
-
-	//wg.Wait()
 
 }
